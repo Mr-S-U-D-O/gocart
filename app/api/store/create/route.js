@@ -45,7 +45,7 @@ export async function POST(request) {
 
     // if store is already registered
     if (store) {
-      return NextResponse.json({ store: store.status });
+      return NextResponse.json({ status: store.status });
     }
 
     //check if username is already taken
@@ -98,18 +98,46 @@ export async function POST(request) {
     //link store to user
     await prisma.user.update({
       where: { id: userId },
-      data: { store: { connect: {id: newStore.id} } },
+      data: { store: { connect: { id: newStore.id } } },
     });
 
     return NextResponse.json({
-      message: "applied, waiting for approval"
+      message: "applied, waiting for approval",
     });
   } catch (error) {
-    console.log(error)
+    console.log(error);
     return NextResponse.json({
-      error: error.code || error.message || "Failed to apply for store", 
+      error: error.code || error.message,
       status: 400,
+    });
+  }
+}
+
+// check if user has already registerd a store if yes then send status of store
+
+export async function GET(request) {
+    try {
+      const { userId } = getAuth(request);
+      // check if user has a store
+      const store = await prisma.store.findFirst({
+        where: {
+          userId: userId,
+        },
+      });
+
+      // if store is already registered
+      if (store) {
+        return NextResponse.json({ status: store.status });
+        }
         
+        return NextResponse.json({
+          status: "not registered"
+        });
+    } catch (error) {
+    console.log(error);
+    return NextResponse.json({
+      error: error.code || error.message,
+      status: 400,
     });
   }
 }
