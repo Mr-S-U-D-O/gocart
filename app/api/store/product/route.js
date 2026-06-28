@@ -83,7 +83,7 @@ export async function POST(request) {
         },
       })
 
-      
+
       
       return NextResponse.json({
         message: "Product added successfully",
@@ -97,3 +97,36 @@ export async function POST(request) {
     });
   }
 }
+
+// get all products for seller 
+
+export async function GET(request) {
+  try {
+    const { userId } = getAuth(request);
+    const storeId = await authSeller(userId);
+    if (!storeId) {
+      return NextResponse.json(
+        {
+          error: "you are not authorized to get products",
+        },
+        { status: 401 },
+      );
+    }
+
+    //get all products for seller
+    const products = await prisma.product.findMany({
+      where: {
+        storeId,
+      },
+    });
+
+    return NextResponse.json({ products });
+  } catch (error) {
+    console.log(error);
+    return NextResponse.json({
+      error: error.code || error.message,
+      status: 400,
+    });
+  }
+}
+
