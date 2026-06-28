@@ -50,7 +50,7 @@ export async function POST(request) {
         id: productId,
       },
       data: {
-        inStock: !product.inStock,
+        stock: !product.stock,
       },
     });
 
