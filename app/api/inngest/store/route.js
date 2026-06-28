@@ -1,59 +1,115 @@
-import { getAuth} from "@clerk/nextjs/server";
+import imagekit from "@/configs/imageKit";
+import prisma from "@/lib/prisma";
+import { getAuth } from "@clerk/nextjs/server";
+import { format } from "date-fns";
 import { NextResponse } from "next/server";
 
 // create the store
 export async function POST(request) {
-    try {
-        const { userId } = getAuth(request)
-        //Get the data from form
-        const formData = await request.formData()
+  try {
+    const { userId } = getAuth(request);
+    //Get the data from form
+    const formData = await request.formData();
 
-        const name = formData("name")
-        const username = formData("username")
-        const description = formData("description")
-        const email = formData("email")
-        const contact = formData("contact")
-        const image = formData("image")
-        const address = formData("address")
-      
-        if (!name || !username || !description || !email || !contact || !image || !address) {
-            return NextResponse.json(
-                {
-                    error: "Missing store information",
-                },
-                { status: 400 }
-            );
-            
+    const name = formData("name");
+    const username = formData("username");
+    const description = formData("description");
+    const email = formData("email");
+    const contact = formData("contact");
+    const image = formData("image");
+    const address = formData("address");
 
-        }
+    if (
+      !name ||
+      !username ||
+      !description ||
+      !email ||
+      !contact ||
+      !image ||
+      !address
+    ) {
+      return NextResponse.json(
+        {
+          error: "Missing store information",
+        },
+        { status: 400 },
+      );
+    }
 
-        // check if user has a store
-        const store = await prisma.store.findFirst({
-            where: {
-                userId: userId
-            }
-        })
+    // check if user has a store
+    const store = await prisma.store.findFirst({
+      where: {
+        userId: userId,
+      },
+    });
+
+    // if store is already registered
+    if (store) {
+      return NextResponse.json({ store: store.status });
+    }
+
+    //check if username is already taken
+    const isUsernameTaken = await prisma.store.findFirst({
+      where: {
+        username: username.toLowerCase(),
+      },
+    });
+
+    if (isUsernameTaken) {
+      return NextResponse.json(
+        {
+          error: "Username already taken",
+        },
+        { status: 400 },
+      );
+    }
+
+    //image upload to image kit
+
+    const buffer = Buffer.from(await image.arrayBuffer());
+    const response = await imagekit.upload({
+      file: buffer,
+      fileName: image.name,
+      folder: "logos",
+    });
+
+    const optimizedImage = imagekit.url({
+      path: response.filePath,
+      tranformation: [
+        { quality: "auto" },
+        { format: "webp" },
+        { width: "512" },
+      ],
+    });
+
+    const newStore = await prisma.store.create({
+      data: {
+        userId,
+        name,
+        username: username.toLowerCase(),
+        description,
+        email,
+        contact,
+        logo: optimizedImage,
+        address,
+      },
+    });
+
+    //link store to user
+    await prisma.user.update({
+      where: { id: userId },
+      data: { store: { connect: {id: newStore.id} } },
+    });
+
+    return NextResponse.json({
+      message: "applied, waiting for approval"
+    });
+  } catch (error) {
+    console.log(error)
+    return NextResponse.json({
+      error: error.code || error.message || "Failed to apply for store", 
+      status: 400,
         
-        // if store is already registered
-        if (store) {
-            return NextResponse.json({ store: store.status }
-            )
-        
-        }
-
-        //check if username is already taken 
-        const isUsernameTaken = await prisma.store.findFirst({
-            where: {
-                username: username.toLowerCase()
-            }
-        })
-
-        if (isUsernameTaken) {
-            return NextResponse.json({
-                error: "Username already taken",
-            },{status: 400})
-        }
-
-        
-    } catch (error) {}
+    });
+  }
 }
