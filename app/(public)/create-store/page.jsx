@@ -82,6 +82,7 @@ export default function CreateStore() {
     if (!user) {
       return toast("You are not logged in , please login to continue");
     }
+    const toastId = toast.loading("Submitting data...");
     try {
       const token = await getToken();
       const formData = new FormData();
@@ -93,15 +94,15 @@ export default function CreateStore() {
       formData.append("address", storeInfo.address);
       formData.append("image", storeInfo.image);
 
-      const { data, error } = await axios.post("/api/store/create", formData, {
+      const { data } = await axios.post("/api/store/create", formData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      toast.success(data.message);
+      toast.success(data.message, { id: toastId });
       await fetchSellerStatus();
     } catch (error) {
-      toast.error(error?.response?.data?.error || error.message);
+      toast.error(error?.response?.data?.error || error.message, { id: toastId });
     }
   };
 
@@ -126,11 +127,7 @@ export default function CreateStore() {
       {!alreadySubmitted ? (
         <div className="mx-6 min-h-[70vh] my-16">
           <form
-            onSubmit={(e) =>
-              toast.promise(onSubmitHandler(e), {
-                loading: "Submitting data...",
-              })
-            }
+            onSubmit={onSubmitHandler}
             className="max-w-7xl mx-auto flex flex-col items-start gap-3 text-slate-500"
           >
             {/* Title */}
