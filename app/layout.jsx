@@ -37,8 +37,10 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+    const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_test_placeholder";
+
     return (
-        <ClerkProvider>
+        <ClerkProvider publishableKey={publishableKey}>
             <html lang="en" className={`${plusJakarta.variable} ${inter.variable}`}>
                 <body className="font-[family-name:var(--font-body)] antialiased bg-[#FAFAF7] text-[#111827]">
                     <StoreProvider>
